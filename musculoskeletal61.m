@@ -1,6 +1,6 @@
 % ----------------------------------------------------------------------------
 %
-% file name : musculoskeletal6.m
+% file name : musculoskeletal61.m
 %
 % purpose : particle filter for estimation of musculoskeletal system parameter
 %
@@ -23,37 +23,40 @@ time = 0;   %initial time
 endtime = 4.0051; %end time[sec]
 
  
-nSteps = ceil((endtime - time)/dt); %mainƒ‹[ƒv‚Ìfor•¶—p. ‚Æ‚è‚ ‚¦‚¸‚Í
-                                    % ‰Šú time‚ğ 0‚Æ’u‚¢‚½‚É endtime[sec] 
-                                    %‚ğ dt[sec]‚ÅŠ„‚Á‚½‚à‚Ì‚ğ nSteps‚Æ‚·‚é.
-                                    %ceil‚Í³‚Ì–³ŒÀ‘å•ûŒü‚ÌŠÛ–Ú
+nSteps = ceil((endtime - time)/dt); %mainãƒ«ãƒ¼ãƒ—ã®foræ–‡ç”¨. ã¨ã‚Šã‚ãˆãšã¯
+                                    % åˆæœŸæ™‚åˆ» timeã‚’ 0ã¨ç½®ã„ãŸæ™‚ã« endtime[sec] 
+                                    %ã‚’ dt[sec]ã§å‰²ã£ãŸã‚‚ã®ã‚’ nStepsã¨ã™ã‚‹.
+                                    %ceilã¯æ­£ã®ç„¡é™å¤§æ–¹å‘ã®ä¸¸ç›®
                                     
-%--------Še‚É‚¨‚¯‚é”’lŠi”[—p‚Ì\‘¢‘Ì(ƒOƒ‰ƒto—Í‚Ég‚¤)-------------------
-result.time=[];     %Œo‰ß
-result.xEst=[];     %„’è’l
+%--------å„æ™‚åˆ»ã«ãŠã‘ã‚‹æ•°å€¤æ ¼ç´ç”¨ã®æ§‹é€ ä½“(ã‚°ãƒ©ãƒ•å‡ºåŠ›ã«ä½¿ã†)-------------------
+result.time=[];     %çµŒéæ™‚åˆ»
+result.xEst=[];     %æ¨å®šå€¤
 result.y=[];
 result.torq=[];
 
 
-%------------------ÀŒ±Œ‹‰Ê-------------------------------
+%--------------------------------å®Ÿé¨“çµæœ-----------------------------------
 extension = [ex_IEMG1, ex_IEMG2, ex_Angle, ex_angular_velocity, ex_Torq];
 flexion = [f_IEMG1, f_IEMG2, f_Angle, f_angular_velocity, f_Torq];
+%--choose flexion or extension data which you want for.
+%% flextion
+% [r_f, r_e, angle, angular_velocity, torq] = experiment(flexion);
+%% extension
+[r_f, r_e, angle, angular_velocity, torq] = experiment_data(extension);
 %--------------------------------------------------------------------------
 
-%-----------------------muscle strength expectation------------------------
-% [r_f, r_e, angle, angular_velocity, torq] = experiment(flexion);%flexion
-[r_f, r_e, angle, angular_velocity, torq] = experiment(extension);%extension
+%% muscle strength expectation
 
+result.observed_torq=[torq];
 
-result.obtorq=[torq];
+%compute Maximal voluntary contraction; MVC
 a_f = r_f/r_f_max;
 a_e = r_e/r_e_max;
 
 u_f = a_f * f_f_o;
 u_e = a_e * f_e_o;
 
-
-%-----------ó‘Ô‚Ì„’è’l--------
+%-------------------------------çŠ¶æ…‹ã®æ¨å®šå€¤--------------------------------%
 xEst = zeros(6,1);
 
 xEst(1) = angle(1);
@@ -62,28 +65,28 @@ xEst(3) = u_f(1);
 xEst(4) = u_e(1);
 xEst(5) = 0.2;
 xEst(6) = 0.05;
+%----------------------Condition of Particle Filter-----------------------%
 
+NP=1; %ãƒ‘ãƒ¼ãƒ†ã‚£ã‚¯ãƒ«æ•°(æ•°ã¯æ¨å®šå¯¾è±¡ã¨æ¡ä»¶ã«å¿œã˜ã¦é©å½“ã«è©¦è¡ŒéŒ¯èª¤ã§æ±ºã‚ã‚‹)
+NTh=NP/1.0; %resamplingã‚’å®Ÿæ–½ã™ã‚‹æœ‰åŠ¹ãƒ‘ãƒ¼ãƒ†ã‚£ã‚¯ãƒ«æ•°
 
-NP=500; %ƒp[ƒeƒBƒNƒ‹”(”‚Í„’è‘ÎÛ‚ÆğŒ‚É‰‚¶‚Ä“K“–‚ÉsöŒë‚ÅŒˆ‚ß‚é)
-NTh=NP/1.0; %resampling‚ğÀ{‚·‚é—LŒøƒp[ƒeƒBƒNƒ‹”
+px=repmat(xEst,1,NP);%ãƒ‘ãƒ¼ãƒ†ã‚£ã‚¯ãƒ«æ ¼ç´å¤‰æ•°
+pw=zeros(1,NP)+1/NP;%é‡ã¿å¤‰æ•°(å°¤åº¦)
 
-px=repmat(xEst,1,NP);%ƒp[ƒeƒBƒNƒ‹Ši”[•Ï”
-pw=zeros(1,NP)+1/NP;%d‚İ•Ï”(–Ş“x)
-
-va = zeros(6,1); % ƒVƒXƒeƒ€G‰¹‚Ì•ª•z‚Ì•W€•Î·
+va = zeros(6,1); % ã‚·ã‚¹ãƒ†ãƒ é›‘éŸ³ã®åˆ†å¸ƒã®æ¨™æº–åå·®
 va(1) = 0.0001;
 va(2) = 0.0001;
 va(3) = 1;
 va(4) = 1;
 va(5) = 0.000001;
 va(6) = 0.000001;
-vb = zeros(6,1); % ƒVƒXƒeƒ€G‰¹‚Ì•ª•z•½‹Ï
+vb = zeros(6,1); % ã‚·ã‚¹ãƒ†ãƒ é›‘éŸ³ã®åˆ†å¸ƒå¹³å‡
 
-%ŠÏ‘ª’l
+%--------------------------------è¦³æ¸¬å€¤------------------------------------%
   y = [angle, angular_velocity, u_f, u_e ];    % observed value y
 
   
-tic;    %timewatch start---------------------------------------------------
+tic;    %timewatch start
 
 % ----------------------------- Main loop --------------------------------
 for i=1 : nSteps
@@ -92,21 +95,17 @@ for i=1 : nSteps
     d = 0.03;
     l = 0.0015;
     v = va.*randn(6,1)+vb;  %random number for system noise
-%     v(5)=0;
-%     v(6)=0;
-    %a*randn+b=(•W€•Î·a‚Æ•½‹Ïb‚Ì³‹K•ª•z‚©‚ç“¾‚½—”)
     
-    
-    %------ŠÏ‘ªG‰¹------------
+    %--------------è¦³æ¸¬é›‘éŸ³-------------
      a = zeros(4,4); %observation noise(ob) standard deviation
     a(1,1) = 0.001;
     a(2,2) = 0.001;
-%     a(3,3) = 3000; %flexion
-%     a(4,4) = 100;
-    a(3,3) = 100; %extension
-    a(4,4) = 3000;
+    a(3,3) = 3000; %flexion
+    a(4,4) = 100;
+%     a(3,3) = 100; %extension
+%     a(4,4) = 3000;
     b = zeros(4,1);  % ob average
-    %-------------ŒW”s—ñ
+    %--------------ä¿‚æ•°è¡Œåˆ—-------------
     c = zeros(4,6);
     c(1,1) = 1;
     c(2,2) = 1;
@@ -122,7 +121,8 @@ for i=1 : nSteps
         vv = va.*randn(6,1)+vb; % randomnumber for system noise
         x = f(x, torq(i), d, l, vv, dt);
         
-        w = Gauss4(abs(y(i,1:4)'-(c*x)), b, a);   % calculate a likelihood of a particle y=cx+w
+        w = Gauss4(abs(y(i,1:4)'-(c*x)), b, a);   % calculate a likelihood 
+                                                  % of a particle y=cx+w
     
         px(:,ip)=x; %save
         pw(ip)=w; %save
@@ -132,12 +132,11 @@ for i=1 : nSteps
     [px,pw]=Resampling(px,pw,NTh,NP);%resampling
     xEst=px*pw'; % final estimation = expectation
     
-    torqEst = -d*(xEst(1)*xEst(3)*xEst(5)+xEst(2)*xEst(3)*xEst(6)+xEst(1)*xEst(4)*xEst(5)+xEst(2)*xEst(4)*xEst(6)-xEst(3)+xEst(4));
-%     torqEst = abs(torqEst);
-%     k_1 = 0.2;
-%     b_1 = 0.05;
-%     y(i,5) = -d*(y(i,1)*y(i,3)*(k_1)+y(i,2)*y(i,3)*(b_1)+y(i,1)*y(i,4)*(k_1)+y(i,2)*y(i,4)*(b_1)-y(i,3)+y(i,4));
-    %ƒOƒ‰ƒto—Í—p‚Ì”’lŠi”[
+    torqEst = -d*(xEst(1)*xEst(3)*xEst(5)+...
+                xEst(2)*xEst(3)*xEst(6)+xEst(1)*xEst(4)*xEst(5)...
+                +xEst(2)*xEst(4)*xEst(6)-xEst(3)+xEst(4));
+
+    %ã‚°ãƒ©ãƒ•å‡ºåŠ›ç”¨ã®æ•°å€¤æ ¼ç´
 
     result.time=[result.time; time];
     result.xEst=[result.xEst;xEst'];
@@ -148,47 +147,46 @@ end
 toc;   %stopwatch stop
 
 
-DrawGraph(result);      %ƒOƒ‰ƒto—Í
-save('musculoskeletal61.mat');   %matƒtƒ@ƒCƒ‹•Û‘¶(ƒtƒ@ƒCƒ‹–¼‚ÍƒJƒbƒR“à‚Åw’è)
+DrawGraph(result);      %ã‚°ãƒ©ãƒ•å‡ºåŠ›
+save('musculoskeletal61.mat');   %matãƒ•ã‚¡ã‚¤ãƒ«ä¿å­˜(ãƒ•ã‚¡ã‚¤ãƒ«åã¯ã‚«ãƒƒã‚³å†…ã§æŒ‡å®š)
 end
-% ----------------------------- Main loop finish --------------------------
+
+%---------------------------- Main loop finish ---------------------------%
 
 function [px,pw]=Resampling(px,pw,NTh,NP) %resampling function
 % Low Variance Sampling algorithm
 Neff=1.0/(pw*pw');
 if Neff<NTh %resampling
     wcum=cumsum(pw);
-    base=cumsum(pw*0+1/NP)-1/NP;%—”‚ğ‰Á‚¦‚é‘O‚Ìbase
-    resampleID=base+rand/NP;%ƒ‹[ƒŒƒbƒg‚ğ—”•ª‘‚â‚·
-    ppx=px;%ƒf[ƒ^Ši”[—p
-    ind=1;%V‚µ‚¢ID
+    base=cumsum(pw*0+1/NP)-1/NP;%ä¹±æ•°ã‚’åŠ ãˆã‚‹å‰ã®base
+    resampleID=base+rand/NP;%ãƒ«ãƒ¼ãƒ¬ãƒƒãƒˆã‚’ä¹±æ•°åˆ†å¢—ã‚„ã™
+    ppx=px;%ãƒ‡ãƒ¼ã‚¿æ ¼ç´ç”¨
+    ind=1;%æ–°ã—ã„ID
     for ip=1:NP
         while(resampleID(ip)>wcum(ind))
             ind=ind+1;
         end
-        px(:,ip)=ppx(:,ind);%LVS‚Å‘I‚Î‚ê‚½particle‚É’u‚«Š·‚¦
-        pw(ip)=1/NP;%–Ş“x‚Ì‰Šú‰»
+        px(:,ip)=ppx(:,ind);%LVSã§é¸ã°ã‚ŒãŸparticleã«ç½®ãæ›ãˆ
+        pw(ip)=1/NP;%å°¤åº¦ã®åˆæœŸåŒ–
     end
 end
 end
-
 function pw=Normalize(pw,NP) %likelihood normalize fuction
 
 sumw=sum(pw);
 if sumw~=0
-    pw=pw/sum(pw); %³‹K‰»
+    pw=pw/sum(pw); %æ­£è¦åŒ–
 else
     pw=zeros(1,NP)+1/NP;
 end
 
 end
-
 function p=Gauss4(X,U,Sigma)
-%ƒKƒEƒX•ª•z(‹¤•ªU)‚ÌŠm—¦–§“x‚ğŒvZ‚·‚éŠÖ”
-%p=1/( ((2*pi)^(1/(size(Sigma,1)))) * (sqrt(det(Sigma))) ) * (exp( (-1/2) * dot((X-repmat(U,1,size(X,2)))' * (inv(Sigma)) , (X-repmat(U,1,size(X,2)))',2)));
-p=1/( ((2*pi)^((size(Sigma,1))/2)) * (sqrt(det(Sigma))) ) * (exp( (-1/2) * dot((X-repmat(U,1,size(X,2)))' * (inv(Sigma)) , (X-repmat(U,1,size(X,2)))',2)));
+%ã‚¬ã‚¦ã‚¹åˆ†å¸ƒ(å…±åˆ†æ•£)ã®ç¢ºç‡å¯†åº¦ã‚’è¨ˆç®—ã™ã‚‹é–¢æ•°
+p=1/( ((2*pi)^((size(Sigma,1))/2)) * (sqrt(det(Sigma))) ) *...
+    (exp( (-1/2) * dot((X-repmat(U,1,size(X,2)))' * ...
+    (inv(Sigma)) , (X-repmat(U,1,size(X,2)))',2)));
 end
-
 function x = f(x,T, d, i, v, dt)    %state model
     A = zeros(6, 6);
     A(1,2)=1;
@@ -204,95 +202,55 @@ function x = f(x,T, d, i, v, dt)    %state model
     x = x + dt*(A*x - (d/i)*B*x-(1/i)*C) + v;
      %state equation
 end
-
-
- function [a, b, c, d, e] = experiment(title)
+ function [a, b, c, d, e] = experiment_data(type)
  
-      a = title(:,1);
-      b = title(:,2);
-      c = title(:,3);
-      d = title(:,4);
-      e = title(:,5);
+      a = type(:,1);
+      b = type(:,2);
+      c = type(:,3);
+      d = type(:,4);
+      e = type(:,5);
  end
- 
-function []=DrawGraph(result)   % drawing graph
- 
-    figure(1);
-    hold off;
-    x=[ result.y(:,1) result.xEst(:,1)];    %ŠÏ‘ª’l‚Æ„’è’l‚ğˆê‚Â‚Ìs—ñ‚É‚Ü‚Æ‚ß‚é
-    plot(result.time, x(:,2),'r--o','linewidth', 1); hold on;   %„’è’l
-    plot(result.time, x(:,1),'b','linewidth', 1); hold on;  %ŠÏ‘ª’l
-    set( gca, 'fontname','times new roman','fontsize',20 );
-    xlim([0 4])
-    xlabel('Time [s]','fontname','times new roman','fontsize', 20);
-    ylabel('Angle \theta [rad]','fontname','times new roman','fontsize', 20);
-    grid on;
-
-    figure(2);
-    hold off;
-    x=[ result.y(:,2) result.xEst(:,2)];    
-    plot(result.time, x(:,2),'r--o','linewidth', 1); hold on;   
-    plot(result.time, x(:,1),'b','linewidth', 1); hold on; 
-    set( gca, 'fontname','times new roman','fontsize',20 );
-    xlim([0 4])
-    xlabel('Time [s]','fontname','times new roman','fontsize', 20);
-    ylabel('$${\rm Angular Velocity} \dot \theta \ {\rm [rad/s]}$$', 'interpreter', 'latex','fontname','times new roman','fontsize', 20)
-    grid on;
-
-    figure(3);
-    hold off;
-    x=[ result.y(:,3) result.xEst(:,3)];   
-    plot(result.time, x(:,2),'r--o','linewidth', 1); hold on;  
-    plot(result.time, x(:,1),'b','linewidth', 1); hold on; 
-    set( gca, 'fontname','times new roman','fontsize',20 );
-    xlim([0 4])
-    xlabel('Time [s]','fontname','times new roman','fontsize', 20);
-    ylabel('Contractile Force {\it u_f} [N]','fontname','times new roman','fontsize', 20);
-    grid on;
-
-    figure(4);
-    hold off;
-    x=[ result.y(:,4) result.xEst(:,4)];  
-    plot(result.time, x(:,2),'r--o','linewidth', 1); hold on;   
-    plot(result.time, x(:,1),'b','linewidth', 1); hold on;  
-    set( gca, 'fontname','times new roman','fontsize',20 );
-    xlim([0 4])
-    xlabel('Time [s]','fontname','times new roman','fontsize', 20);
-    ylabel('Contractile Force {\it u_e} [N]','fontname','times new roman','fontsize', 20);
-    grid on;
-
-    figure(5);
-    hold off;
-    x=[ result.xEst(:,5)];    
-    plot(result.time, x(:,1),'r--o','linewidth', 1); hold on; 
-    set( gca, 'fontname','times new roman','fontsize',20 );
-    xlim([0 4])
-    ylim([0.18 0.22])
-    xlabel('Time [s]','fontname','times new roman','fontsize', 20);
-    ylabel('Elasticity Coefficient {\it k} [N/m] ','fontname','times new roman','fontsize', 20);
-    grid on;
-
-    figure(6);
-    hold off;
-    x=[result.xEst(:,6)];   
-    plot(result.time, x(:,1),'r--o','linewidth', 1); hold on; 
-    set( gca, 'fontname','times new roman','fontsize',20 );
-    xlim([0 4])
-    ylim([0.04 0.06])
-    xlabel('Time [s]','fontname','times new roman','fontsize', 20);
-    ylabel('Viscosity Coefficient {\it b} [N.s/m] ','fontname','times new roman','fontsize', 20);
-    grid on;
+ function [] = labeling(i)
+        ytitle = {'Angle \theta [rad]',...
+              '$${\rm Angular Velocity} \dot \theta \ {\rm [rad/s]}$$',...
+              'Contractile Force {\it u_f} [N]',...
+              'Contractile Force {\it u_e} [N]',...
+              'Elasticity Coefficient {\it k} [N/m] ',...
+              'Viscosity Coefficient {\it b} [N.s/m] ',...
+              'Torque \tau [Nm]'};
+        xlabel('Time [s]','fontname','times new roman','fontsize', 20);
+        if i == 2
+            ylabel('$${\rm Angular Velocity} \dot \theta \ {\rm [rad/s]}$$', ...
+            'interpreter', 'latex','fontname','times new roman','fontsize', 20)
+        else
+            ylabel(ytitle{i},'fontname','times new roman','fontsize', 20);
+        end
+ end
+ function []=DrawGraph(result)
     
-     figure(7);
-    hold off;
-    x=[result.torq result.obtorq];   
-    plot(result.time, x(:,1),'r--o','linewidth', 1); hold on;    
-    plot(result.time, x(:,2),'b','linewidth', 1); hold on;  
-    set( gca, 'fontname','times new roman','fontsize',20 );
-    xlim([0 4])
-    xlabel('Time [s]','fontname','times new roman','fontsize', 20);
-    ylabel('Torque \tau [Nm]','fontname','times new roman','fontsize', 20);
-    grid on;
-
-   
-end
+     for i = 1:7
+        figure(i);
+        hold off;
+        if i < 5 
+            x=[ result.y(:,i) result.xEst(:,i)];    %è¦³æ¸¬å€¤ã¨æ¨å®šå€¤ã‚’ä¸€ã¤ã®è¡Œåˆ—ã«ã¾ã¨ã‚ã‚‹
+            plot(result.time, x(:,2),'r--o','linewidth', 1); hold on;   %æ¨å®šå€¤
+            plot(result.time, x(:,1),'b','linewidth', 1); hold on;  %è¦³æ¸¬å€¤
+        elseif i == 5 || i == 6
+            x= result.xEst(:,i);
+            plot(result.time, x(:,1),'r--o','linewidth', 1); hold on; 
+            if i == 5
+                ylim([0.18 0.22])
+            else
+                ylim([0.04 0.06])
+            end
+        elseif i == 7
+            x=[result.torq result.observed_torq];   
+            plot(result.time, x(:,1),'r--o','linewidth', 1); hold on;    
+            plot(result.time, x(:,2),'b','linewidth', 1); hold on; 
+        end
+        xlim([0 4])
+        labeling(i)
+        grid on;
+        set( gca, 'fontname','times new roman','fontsize',20 );
+     end
+ end
